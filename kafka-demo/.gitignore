@@ -1,0 +1,5 @@
+# Artefactos de compilación
+target/
+go/producer
+go/consumer
+*.jar

@@ -1,0 +1,28 @@
+# syntax=docker/dockerfile:1
+# Imagen 2 de 4: consumidor Kafka escrito en Go.
+FROM golang:1.24-alpine AS build
+
+WORKDIR /src
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY internal ./internal
+COPY cmd ./cmd
+
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/consumer ./cmd/consumer
+
+FROM alpine:3.21
+
+RUN apk add --no-cache ca-certificates tzdata \
+    && adduser -D -u 10001 kafka
+
+COPY --from=build /out/consumer /usr/local/bin/consumer
+
+USER kafka
+ENV KAFKA_BOOTSTRAP_SERVERS=kafka:9092 \
+    KAFKA_TOPICS=farmacia.pedidos,farmacia.inventario \
+    KAFKA_GROUP_ID=farmacia-go-consumers \
+    CONSUMER_ID=go-consumer-1
+
+ENTRYPOINT ["/usr/local/bin/consumer"]

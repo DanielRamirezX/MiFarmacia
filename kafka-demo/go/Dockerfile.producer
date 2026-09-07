@@ -1,0 +1,30 @@
+# syntax=docker/dockerfile:1
+# Imagen 1 de 4: productor Kafka escrito en Go.
+FROM golang:1.24-alpine AS build
+
+WORKDIR /src
+
+# Las dependencias se copian primero para aprovechar la caché de capas.
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY internal ./internal
+COPY cmd ./cmd
+
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/producer ./cmd/producer
+
+FROM alpine:3.21
+
+RUN apk add --no-cache ca-certificates tzdata \
+    && adduser -D -u 10001 kafka
+
+COPY --from=build /out/producer /usr/local/bin/producer
+
+USER kafka
+ENV KAFKA_BOOTSTRAP_SERVERS=kafka:9092 \
+    KAFKA_TOPICS=farmacia.pedidos,farmacia.inventario \
+    PRODUCER_ID=go-producer-1 \
+    PRODUCE_INTERVAL_MS=1000 \
+    MESSAGE_COUNT=0
+
+ENTRYPOINT ["/usr/local/bin/producer"]

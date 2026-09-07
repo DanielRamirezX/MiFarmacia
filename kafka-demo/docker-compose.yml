@@ -1,0 +1,118 @@
+# Demo de Kafka con cuatro imágenes propias: productor y consumidor en Go,
+# y productor y consumidor en Java. El broker usa la imagen oficial de
+# Apache Kafka en modo KRaft (sin ZooKeeper).
+name: kafka-demo
+
+services:
+  kafka:
+    image: apache/kafka:4.1.2
+    container_name: kafka
+    ports:
+      # Listener externo para conectarse desde la máquina anfitriona.
+      - "29092:29092"
+    environment:
+      CLUSTER_ID: 5L6g3nShT-eMCtK--X86sw
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    # Sin volumen: el estado del broker es efímero, que es lo que quiere una
+    # demo (cada `up` arranca limpio). Para conservarlo entre reinicios basta
+    # con montar un volumen sobre el directorio que use `log.dirs`.
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server kafka:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+    networks: [kafka-net]
+
+  # --- Imagen 1 de 4 -------------------------------------------------------
+  go-producer:
+    build:
+      context: ./go
+      dockerfile: Dockerfile.producer
+    image: mifarmacia/kafka-go-producer:1.0.0
+    container_name: go-producer
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPICS: farmacia.pedidos,farmacia.inventario
+      PRODUCER_ID: go-producer-1
+      PRODUCE_INTERVAL_MS: 1500
+      MESSAGE_COUNT: 0
+      TOPIC_PARTITIONS: 3
+      TOPIC_REPLICATION_FACTOR: 1
+    restart: on-failure
+    networks: [kafka-net]
+
+  # --- Imagen 2 de 4 -------------------------------------------------------
+  go-consumer:
+    build:
+      context: ./go
+      dockerfile: Dockerfile.consumer
+    image: mifarmacia/kafka-go-consumer:1.0.0
+    container_name: go-consumer
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPICS: farmacia.pedidos,farmacia.inventario
+      KAFKA_GROUP_ID: farmacia-go-consumers
+      CONSUMER_ID: go-consumer-1
+    restart: on-failure
+    networks: [kafka-net]
+
+  # --- Imagen 3 de 4 -------------------------------------------------------
+  java-producer:
+    build:
+      context: ./java/producer
+    image: mifarmacia/kafka-java-producer:1.0.0
+    container_name: java-producer
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPICS: farmacia.pedidos,farmacia.inventario
+      PRODUCER_ID: java-producer-1
+      PRODUCE_INTERVAL_MS: 1500
+      MESSAGE_COUNT: 0
+      TOPIC_PARTITIONS: 3
+      TOPIC_REPLICATION_FACTOR: 1
+    restart: on-failure
+    networks: [kafka-net]
+
+  # --- Imagen 4 de 4 -------------------------------------------------------
+  java-consumer:
+    build:
+      context: ./java/consumer
+    image: mifarmacia/kafka-java-consumer:1.0.0
+    container_name: java-consumer
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPICS: farmacia.pedidos,farmacia.inventario
+      KAFKA_GROUP_ID: farmacia-java-consumers
+      CONSUMER_ID: java-consumer-1
+    restart: on-failure
+    networks: [kafka-net]
+
+networks:
+  kafka-net:
+    driver: bridge
