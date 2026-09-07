@@ -131,6 +131,10 @@ hacen `commit` de lo procesado y cierran la sesión del grupo (en Java vía
 los consumidores hacen *commit* manual después de imprimir el lote, para no
 perder mensajes ante un reinicio.
 
+**Codificación.** Las imágenes Java arrancan con `-Dstdout.encoding=UTF-8`
+porque el JRE base no trae locale y, sin ese ajuste, los acentos y los
+caracteres de recuadro salen como interrogaciones.
+
 **Imágenes.** Las cuatro usan compilación multi-etapa: el compilador y Maven
 quedan en la etapa de build y no viajan en la imagen final. Go produce un
 binario estático sobre `alpine:3.21`; Java un *fat jar* sobre

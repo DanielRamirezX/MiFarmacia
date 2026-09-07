@@ -26,4 +26,7 @@ ENV KAFKA_BOOTSTRAP_SERVERS=kafka:9092 \
     CONSUMER_ID=java-consumer-1 \
     JAVA_OPTS="-XX:MaxRAMPercentage=75"
 
-ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]
+# Las opciones de codificación van fuera de JAVA_OPTS para que sigan
+# aplicándose aunque se sobrescriba esa variable: sin ellas la consola de
+# la imagen (sin locale) rompe los acentos y los caracteres de recuadro.
+ENTRYPOINT ["sh", "-c", "exec java -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 $JAVA_OPTS -jar /app/app.jar"]

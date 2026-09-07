@@ -11,7 +11,7 @@ services:
       # Listener externo para conectarse desde la máquina anfitriona.
       - "29092:29092"
     environment:
-      CLUSTER_ID: 5L6g3nShT-eMCtK--X86sw
+      CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093

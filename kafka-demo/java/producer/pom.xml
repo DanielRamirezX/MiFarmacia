@@ -23,6 +23,13 @@
       <artifactId>kafka-clients</artifactId>
       <version>${kafka.version}</version>
     </dependency>
+    <!-- kafka-clients arrastra slf4j-api 1.7.x; se declara aquí de forma
+         explícita para que gane la versión 2.x que espera slf4j-simple. -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-simple</artifactId>
